@@ -44,7 +44,7 @@ class Acl_auth
 				'last_ip'		=> $this->ci->ips->get_ip_address(),
 				'last_login'	=> date( 'Y-m-d H:s:i' )
 			);
-			$this->ci->user_model->update( $acesso , array( 'id_user' => $result->id_user ) );
+			$this->ci->db->update( 'user', $acesso , array( 'id_user' => $result->id_user ) );
 
 			return $result;
 		} else {
