@@ -41,7 +41,7 @@ class Acl_auth
 
 			// Gravando IP e data de acesso
 			$acesso = array(
-				'last_ip'		=> $this->ci->ips->get_ip_address(),
+				'last_ip'		=> $this->get_ip_address(),
 				'last_login'	=> date( 'Y-m-d H:s:i' )
 			);
 			$this->ci->db->update( 'user', $acesso , array( 'id_user' => $result->id_user ) );
@@ -113,7 +113,9 @@ class Acl_auth
 	*/
 	private function _authenticate( $username, $password )
 	{
-		$usuario = $this->ci->user_model->getUsers( array( 'activated' => 1, 'username' => $username ) );
+		$this->ci->db->where( array( 'activated' => 1, 'username' => $username ) );
+		$usuario = $this->ci->db->get( 'user' )->row();
+
 		if( $usuario && password_verify( $password, $usuario->password ) ) return $usuario;
 
 		return false;
@@ -179,5 +181,44 @@ class Acl_auth
 		}
 
 		return $registros;
+	}
+
+	/**
+	* Método para retornar o ip real do usuário, excluindo o proxy
+	* @return string | ip real
+	*/
+	public function get_ip_address()
+	{
+		$servers = array(
+			'HTTP_CLIENT_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_X_FORWARDED',
+			'HTTP_X_CLUSTER_CLIENT_IP',
+			'HTTP_FORWARDED_FOR',
+			'HTTP_FORWARDED',
+			'REMOTE_ADDR'
+		);
+		foreach( $servers  as $key ) {
+			if( array_key_exists( $key, $_SERVER ) === true ) {
+				$array_ips = explode( ',', $_SERVER[$key] );
+				$ip = end( $array_ips );
+				$ip = trim( $ip );
+
+				if( $this->_validate_ip( $ip ) ) {
+					return $ip;
+				} else {
+					return false;
+				}
+			}
+		}
+	}
+
+	private function _validate_ip( $ip )
+	{
+		if( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 || FILTER_FLAG_IPV6 || FILTER_FLAG_NO_PRIV_RANGE || FILTER_FLAG_NO_RES_RANGE ) === false ) {
+			return false;
+		}
+
+		return true;
 	}
 }
